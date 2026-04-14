@@ -14,7 +14,7 @@ export default function GeminiDocScanner() {
 
   // Load API key from localStorage
   React.useEffect(() => {
-    const savedKey = localStorage.getItem('gemini_api_key');
+    const savedKey = localStorage.getItem('groq_api_key');
     if (savedKey) {
       setApiKey(savedKey);
       setStep('capture');
@@ -23,7 +23,7 @@ export default function GeminiDocScanner() {
 
   const saveApiKey = () => {
     if (apiKey.trim()) {
-      localStorage.setItem('gemini_api_key', apiKey.trim());
+      localStorage.setItem('groq_api_key', apiKey.trim());
       setStep('capture');
       setError(null);
     } else {
@@ -59,17 +59,22 @@ export default function GeminiDocScanner() {
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        'https://api.groq.com/openai/v1/chat/completions',
         {
           method: 'POST',
           headers: {
+            'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            contents: [{
-              parts: [
-                { 
-                  text: `อ่านข้อมูลจากเอกสารในรูปภาพนี้ และส่งคืนเป็น JSON format ดังนี้:
+            model: 'llama-3.2-90b-vision-preview',
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: `อ่านข้อมูลจากเอกสารในรูปภาพนี้ และส่งคืนเป็น JSON format ดังนี้:
 
 {
   "type": "ประเภทเอกสาร (เช่น Passport, บัตรประชาชนไทย, ใบขับขี่ไทย, ใบขับขี่ต่างประเทศ)",
@@ -86,21 +91,18 @@ export default function GeminiDocScanner() {
 - ถ้าข้อมูลใดไม่มีให้ใส่ "-"
 - ตอบกลับเฉพาะ JSON เท่านั้น ไม่ต้องมีคำอธิบายเพิ่มเติม
 - ถ้าอ่านไม่ออกให้ระบุว่า "ไม่สามารถอ่านได้"`
-                },
-                { 
-                  inline_data: {
-                    mime_type: mimeType,
-                    data: base64Image
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: `data:${mimeType};base64,${base64Image}`
+                    }
                   }
-                }
-              ]
-            }],
-            generationConfig: {
-              temperature: 0.1,
-              topK: 32,
-              topP: 1,
-              maxOutputTokens: 2048,
-            }
+                ]
+              }
+            ],
+            temperature: 0.1,
+            max_tokens: 2048
           })
         }
       );
@@ -112,8 +114,8 @@ export default function GeminiDocScanner() {
 
       const data = await response.json();
       
-      // Extract the response text
-      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      // Extract the response text from Groq format
+      const resultText = data.choices?.[0]?.message?.content || '';
       
       // Try to parse JSON from the response
       let jsonMatch = resultText.match(/\{[\s\S]*\}/);
@@ -165,7 +167,7 @@ export default function GeminiDocScanner() {
   };
 
   const clearApiKey = () => {
-    localStorage.removeItem('gemini_api_key');
+    localStorage.removeItem('groq_api_key');
     setApiKey('');
     setStep('setup');
   };
@@ -218,7 +220,7 @@ export default function GeminiDocScanner() {
             marginTop: '12px',
             boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
           }}>
-            ✨ ฟรี 100% — Powered by Google Gemini
+            ✨ ฟรี 100% — Powered by Groq (Llama Vision)
           </div>
         </div>
 
@@ -295,7 +297,7 @@ export default function GeminiDocScanner() {
                 margin: 0,
                 lineHeight: '1.6'
               }}>
-                ใช้งานฟรี 100% ด้วย Google Gemini API
+                ใช้งานฟรี 100% ด้วย Groq API (Llama Vision)
               </p>
             </div>
 
@@ -308,14 +310,14 @@ export default function GeminiDocScanner() {
                 color: '#475569',
                 marginBottom: '8px'
               }}>
-                Gemini API Key
+                Groq API Key
               </label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showApiKey ? 'text' : 'password'}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="AIza..."
+                  placeholder="gsk_..."
                   style={{
                     width: '100%',
                     padding: '14px 50px 14px 16px',
@@ -427,10 +429,11 @@ export default function GeminiDocScanner() {
                 paddingLeft: '20px',
                 lineHeight: '1.8'
               }}>
-                <li>เปิด <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: '600' }}>Google AI Studio</a></li>
-                <li>Login ด้วย Google Account</li>
+                <li>เปิด <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: '600' }}>Groq Console</a></li>
+                <li>กด Sign Up (ใช้ Google/GitHub)</li>
+                <li>ไปที่ "API Keys" ในเมนูซ้าย</li>
                 <li>กด "Create API Key"</li>
-                <li>Copy API Key มาวางด้านบน</li>
+                <li>Copy API Key (gsk_...) มาวางด้านบน</li>
               </ol>
               <div style={{
                 marginTop: '12px',
@@ -441,7 +444,7 @@ export default function GeminiDocScanner() {
                 color: '#1e40af',
                 fontWeight: '600'
               }}>
-                💰 ฟรี: 1,500 requests/วัน (เพียงพอมาก!)
+                💰 ฟรี: 14,400 requests/วัน | เร็วมากๆ!
               </div>
             </div>
           </div>
@@ -923,7 +926,7 @@ export default function GeminiDocScanner() {
             gap: '8px'
           }}>
             <Check size={20} color="#10b981" />
-            ใช้งานจริง — Powered by Gemini
+            ใช้งานจริง — Powered by Groq
           </h3>
           <p style={{
             fontSize: '14px',
